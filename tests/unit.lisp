@@ -49,3 +49,30 @@
                   systemd:+log-err+   systemd:+log-warning+ systemd:+log-notice+
                   systemd:+log-info+  systemd:+log-debug+)))
     (is (equal vs '(0 1 2 3 4 5 6 7)))))
+
+;;;; ---------------------------------------------------- journal-log macro
+
+(defun %expansion-string (form)
+  (let ((*print-case* :upcase))
+    (prin1-to-string (macroexpand-1 form))))
+
+(test journal-log/auto-fills-code-file-when-compiling
+  (let* ((*compile-file-pathname* #P"/tmp/foo.lisp")
+         (s (%expansion-string
+             '(systemd:journal-log systemd:+log-info+ "msg" :user 1))))
+    (is (search ":CODE-FILE" s))
+    (is (search "/tmp/foo.lisp" s))))
+
+(test journal-log/no-code-file-at-repl
+  (let* ((*compile-file-pathname* nil)
+         (s (%expansion-string
+             '(systemd:journal-log systemd:+log-info+ "msg"))))
+    (is (not (search ":CODE-FILE" s)))))
+
+(test journal-log/explicit-code-file-suppresses-auto
+  (let* ((*compile-file-pathname* #P"/tmp/foo.lisp")
+         (s (%expansion-string
+             '(systemd:journal-log systemd:+log-info+ "msg"
+                                   :code-file "/other.lisp"))))
+    (is (search "/other.lisp" s))
+    (is (not (search "/tmp/foo.lisp" s)))))

@@ -154,6 +154,41 @@ socket, then return the first captured payload as a string."
     (is (string= msg
                  (%journalctl-field (format nil "MESSAGE=~A" msg) "MESSAGE")))))
 
+;;;; ---------------------------------------- sd_listen_fds / sd_watchdog_enabled
+
+#+sbcl
+(test listen-fds/none-when-env-unset
+  (ignore-errors (sb-posix:unsetenv "LISTEN_FDS"))
+  (ignore-errors (sb-posix:unsetenv "LISTEN_PID"))
+  (is (null (systemd:listen-fds))))
+
+#+sbcl
+(test watchdog-interval/nil-when-env-unset
+  (ignore-errors (sb-posix:unsetenv "WATCHDOG_USEC"))
+  (ignore-errors (sb-posix:unsetenv "WATCHDOG_PID"))
+  (is (null (systemd:watchdog-interval))))
+
+#+sbcl
+(test watchdog-interval/parses-microseconds
+  (sb-posix:setenv "WATCHDOG_USEC" "5000000" 1)
+  (sb-posix:setenv "WATCHDOG_PID"
+                   (princ-to-string (sb-posix:getpid)) 1)
+  (unwind-protect
+       (is (= 5000000 (systemd:watchdog-interval)))
+    (ignore-errors (sb-posix:unsetenv "WATCHDOG_USEC"))
+    (ignore-errors (sb-posix:unsetenv "WATCHDOG_PID"))))
+
+#+sbcl
+(test watchdog-interval/foreign-pid-yields-nil
+  ;; WATCHDOG_PID set to a PID we definitely aren't (PID 1) means the
+  ;; watchdog is not enabled for *us*.
+  (sb-posix:setenv "WATCHDOG_USEC" "5000000" 1)
+  (sb-posix:setenv "WATCHDOG_PID" "1" 1)
+  (unwind-protect
+       (is (null (systemd:watchdog-interval)))
+    (ignore-errors (sb-posix:unsetenv "WATCHDOG_USEC"))
+    (ignore-errors (sb-posix:unsetenv "WATCHDOG_PID"))))
+
 ;;;; ----------------------------------------------------------------- runner
 
 (defun run-all ()

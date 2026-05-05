@@ -51,3 +51,24 @@ errno from libsystemd."
   "Send a single MESSAGE entry at PRIORITY (0..7), formatting like FORMAT."
   (journal-send :message  (apply #'format nil format-string args)
                 :priority priority))
+
+(defmacro journal-log (priority message &rest fields)
+  "Send a structured journal entry with CODE_FILE auto-filled at
+compile time when *COMPILE-FILE-PATHNAME* is bound (i.e. when the
+caller is being compiled from a file rather than typed at the REPL).
+
+PRIORITY is one of +LOG-EMERG+ .. +LOG-DEBUG+. MESSAGE is a string.
+FIELDS is the same plist accepted by JOURNAL-SEND, e.g.
+
+  (journal-log +log-info+ \"connected\"
+               :user-id   42
+               :code-func \"login-handler\")
+
+A user-supplied :CODE-FILE in FIELDS overrides the auto-fill."
+  (let ((auto-file (when (and *compile-file-pathname*
+                              (not (getf fields :code-file)))
+                     `(:code-file ,(namestring *compile-file-pathname*)))))
+    `(journal-send :priority ,priority
+                   :message  ,message
+                   ,@auto-file
+                   ,@fields)))

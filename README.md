@@ -87,12 +87,48 @@ and as a managed service.
 (systemd:notify (format nil "RELOADING=1~%MONOTONIC_USEC=~D" usec))
 ```
 
+### Auto-attributed log entries
+
+`journal-log` is a macro form of `journal-send` that fills in
+`CODE_FILE` at compile time, so `journalctl --output=verbose` shows the
+source file each entry came from:
+
+```lisp
+(systemd:journal-log systemd:+log-info+ "user logged in"
+                     :user-id   42
+                     :code-func "login-handler")
+```
+
+Pass `:code-file` explicitly to override, or pass `:code-line` /
+`:code-func` for the rest of journald's source-attribution fields.
+
+### Socket activation and the watchdog
+
+```lisp
+;; Receive sockets passed by systemd:
+(let ((fds (systemd:listen-fds :unset-environment t)))
+  (dolist (fd fds)
+    ;; fd is a raw integer; wrap it with sb-bsd-sockets:make-inet-socket
+    ;; or sb-sys:make-fd-stream, depending on what the unit declared.
+    (handle-activated-socket fd)))
+
+;; Pace the watchdog at half the configured interval:
+(let ((usec (systemd:watchdog-interval)))
+  (when usec
+    (loop (sleep (/ usec 2.0 1000000))
+          (systemd:notify-watchdog))))
+```
+
+Both functions return `NIL` when the relevant environment variables
+aren't set, so the same code is safe to run interactively.
+
 ## Exported API
 
 | Name                         | Purpose                                                       |
 |------------------------------|---------------------------------------------------------------|
 | `journal-send &rest plist`   | Structured entry via `sd_journal_sendv`.                      |
 | `journal-print prio fmt …`   | One-line `MESSAGE` at `prio`; `format`-style args.            |
+| `journal-log prio msg &rest plist` | Macro: `journal-send` with `CODE_FILE` auto-filled.     |
 | `notify state &key unset-environment` | Send a pre-formatted `sd_notify` payload.            |
 | `notify* &rest plist`        | `notify` with a plist (`:ready 1 :status "ok"`).              |
 | `notify-ready &key status`   | `READY=1`, optionally with `STATUS=...`.                      |
@@ -100,7 +136,11 @@ and as a managed service.
 | `notify-status status`       | `STATUS=<status>`.                                            |
 | `notify-watchdog`            | `WATCHDOG=1`.                                                 |
 | `notify-reloading`           | `RELOADING=1`.                                                |
+| `listen-fds &key unset-environment` | List of fds from socket activation, or `NIL`.          |
+| `watchdog-interval &key unset-environment` | Watchdog interval in µs, or `NIL`.              |
+| `libsystemd-error`           | Condition signaled by `listen-fds` / `watchdog-interval` on failure. |
 | `+log-emerg+` … `+log-debug+`| Standard syslog priority integers (0–7).                      |
+| `+sd-listen-fds-start+`      | First fd index used by `sd_listen_fds` (`3`).                 |
 
 ## Tests
 

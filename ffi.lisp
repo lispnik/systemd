@@ -21,3 +21,24 @@
 (cffi:defcfun ("sd_notify" %sd-notify) :int
   (unset-environment :int)
   (state             :string))
+
+(cffi:defcfun ("sd_listen_fds" %sd-listen-fds) :int
+  (unset-environment :int))
+
+(cffi:defcfun ("sd_watchdog_enabled" %sd-watchdog-enabled) :int
+  (unset-environment :int)
+  (usec              :pointer))
+
+(define-condition libsystemd-error (error)
+  ((function :initarg :function :reader libsystemd-error-function)
+   (errno    :initarg :errno    :reader libsystemd-error-errno))
+  (:report (lambda (c stream)
+             (format stream "~A failed: errno ~D"
+                     (libsystemd-error-function c)
+                     (libsystemd-error-errno c)))))
+
+(defun %check (rc fn-name)
+  "If RC is negative, signal LIBSYSTEMD-ERROR; otherwise return RC."
+  (if (minusp rc)
+      (error 'libsystemd-error :function fn-name :errno (- rc))
+      rc))

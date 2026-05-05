@@ -8,7 +8,8 @@
   :components ((:file "package")
                (:file "ffi")
                (:file "journal")
-               (:file "notify"))
+               (:file "notify")
+               (:file "service"))
   :in-order-to ((asdf:test-op (asdf:test-op #:systemd/tests))))
 
 (asdf:defsystem #:systemd/tests
