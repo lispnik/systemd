@@ -20,8 +20,8 @@ jobs:
       - name: Build and install ocicl
         run: |
           git clone --depth 1 https://github.com/ocicl/ocicl.git /tmp/ocicl
-          make -C /tmp/ocicl
-          make -C /tmp/ocicl install
+          cd /tmp/ocicl
+          sbcl --non-interactive --load setup.lisp
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Configure SBCL
