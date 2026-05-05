@@ -1,5 +1,7 @@
 # systemd
 
+[![CI](https://github.com/lispnik/systemd/actions/workflows/ci.yml/badge.svg)](https://github.com/lispnik/systemd/actions/workflows/ci.yml)
+
 Common Lisp bindings for two libsystemd entry points:
 
 - `sd_journal_sendv(3)` — write structured records to the systemd journal.
