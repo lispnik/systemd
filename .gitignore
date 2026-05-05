@@ -1,0 +1,7 @@
+*.fasl
+*.fasl.tmp
+*.fasl.lock
+.claude/
+systems/
+systems.csv
+ocicl-runtime.lisp
