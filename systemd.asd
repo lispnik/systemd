@@ -1,7 +1,7 @@
 (asdf:defsystem #:systemd
   :description "CFFI bindings for libsystemd's sd_journal_sendv and sd_notify."
   :license "MIT"
-  :version "0.1.0"
+  :version "0.2.0"
   :author "Matthew Kennedy <burnsidemk@gmail.com>"
   :depends-on (#:cffi #:babel)
   :serial t
