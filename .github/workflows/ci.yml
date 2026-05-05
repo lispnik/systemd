@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SBCL and libsystemd
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            sbcl libsystemd-dev systemd build-essential git ca-certificates
+
+      - name: Build and install ocicl
+        run: |
+          git clone --depth 1 https://github.com/ocicl/ocicl.git /tmp/ocicl
+          make -C /tmp/ocicl
+          make -C /tmp/ocicl install
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Configure SBCL
+        run: |
+          cat > "$HOME/.sbclrc" <<'EOF'
+          #-ocicl
+          (let ((rt (merge-pathnames ".local/share/ocicl/ocicl-runtime.lisp"
+                                     (user-homedir-pathname))))
+            (when (probe-file rt) (load rt)))
+          (asdf:initialize-source-registry
+            (list :source-registry (list :directory (uiop:getcwd))
+                  :inherit-configuration))
+          EOF
+
+      - name: Install Lisp dependencies
+        run: ocicl install cffi babel fiveam
+
+      - name: Run tests
+        run: sbcl --non-interactive --eval '(asdf:test-system :systemd)'
